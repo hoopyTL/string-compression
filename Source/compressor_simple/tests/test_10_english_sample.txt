@@ -1,0 +1,1 @@
+Lossless data compression algorithms allow original data to be perfectly reconstructed from the compressed data. It is widely used in ZIP, PNG, and GZIP file formats.
