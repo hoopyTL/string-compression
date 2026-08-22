@@ -1,0 +1,22 @@
+Nhóm em dùng Gitbash để chạy script.
+
+Mở gitbash ở folder chứa source code
+
+
+Chỉ gồm 2 dòng là:
+
+
+chmod +x run_experiments.sh
+ 
+./run_experiments.shh
+
+
+Về cơ bản flow là:
+
+Script là file "run_experiments.sh" để lấy ngẫu nhiên source text từ Project Gutenberg
+
+Mỗi scenerio cho 3 loại repetitive/English/random data sẽ được tự tạo và random ra toàn bộ 27 test case
+
+Test và verify
+
+Viết kết quả vào file "result.csv"
