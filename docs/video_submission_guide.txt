@@ -1,0 +1,45 @@
+========================================================================
+VIDEO DEMO SUBMISSION GUIDE (Rubric: 2 pts)
+Course: CSC10004 - Data Structures & Algorithms, HCMUS
+========================================================================
+
+According to the Project Guideline (Section 4):
+- Video Duration: Maximum 5 minutes
+- Platform: Upload to YouTube (as Unlisted or Public)
+- Video Title MUST BE EXACTLY:
+  25CA-DSA-Group<GroupID> String Compression
+  (Example: 25CA-DSA-Group01 String Compression)
+- Submit the link in a file named `video.txt` inside the submission zip.
+
+------------------------------------------------------------------------
+RECOMMENDED TIMESTAMPS FOR YOUTUBE DESCRIPTION & DEMO
+(Matches the Rubric requirement: "Having timestamps to mark each step")
+------------------------------------------------------------------------
+00:00 - Introduction & Group Information
+00:20 - Codebase Overview & Clean Compilation (g++ -std=c++17)
+01:00 - Run-Length Encoding (RLE) Demo (Compression & Lossless Decompression)
+02:00 - Huffman Coding Demo (Building Tree, Bitstream Packing & Verification)
+03:00 - LZW Algorithm Demo (Dictionary Expansion & Decompression)
+04:00 - Automated Experiments & Benchmark Verification (run_experiments.sh)
+04:45 - Summary & Conclusion
+
+------------------------------------------------------------------------
+FORMAT FOR `video.txt` FILE
+------------------------------------------------------------------------
+Inside your `video.txt` file (to be placed at the root of <GroupID>.zip):
+
+YouTube Video Link:
+https://youtu.be/YOUR_VIDEO_ID_HERE
+
+Title:
+25CA-DSA-Group<GroupID> String Compression
+
+Timestamps:
+00:00 Introduction & Group Members
+00:20 Compilation phase (g++ standard C++17)
+01:00 RLE Compression & Decompression
+02:00 Huffman Coding Compression & Decompression
+03:00 LZW Compression & Decompression
+04:00 Automated Benchmarks (10KB - 10MB & Entropy)
+04:45 Conclusion
+========================================================================

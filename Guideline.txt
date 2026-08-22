@@ -7,8 +7,7 @@ Chỉ gồm 2 dòng là:
 
 
 chmod +x run_experiments.sh
- 
-./run_experiments.shh
+./run_experiments.sh
 
 
 Về cơ bản flow là:

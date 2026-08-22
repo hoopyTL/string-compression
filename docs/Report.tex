@@ -1,0 +1,315 @@
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+
+\begin{document}
+
+\title{Investigation and Comparative Analysis of Lossless String Compression Algorithms}
+
+\author{
+    \IEEEauthorblockN{Student Name 1\IEEEauthorrefmark{1}, Student Name 2\IEEEauthorrefmark{2}, Student Name 3\IEEEauthorrefmark{3}, Student Name 4\IEEEauthorrefmark{4}} \\
+    \IEEEauthorblockA{Faculty of Information Technology, Department of Knowledge Engineering \\
+    University of Science, Vietnam National University - Ho Chi Minh City (VNU-HCM) \\
+    Email: \{student1, student2, student3, student4\}@fit.hcmus.edu.vn}
+}
+
+\markboth{Data Structures \& Algorithms (CSC10004) --- Final Project Report, Summer 2026}%
+{Group Project: String Compression}
+
+\maketitle
+
+\begin{abstract}
+Lossless data compression is a fundamental cornerstone of modern computational systems, critical to telecommunications, storage optimization, and distributed streaming. This paper presents a theoretical investigation, empirical benchmarking, and comparative analysis of three canonical lossless compression paradigms: Run-Length Encoding (RLE), Huffman Coding, and the Lempel-Ziv-Welch (LZW) algorithm. We evaluate these techniques across varying data scales (from 10~KB to 10~MB) and distinct information entropy profiles (highly repetitive, natural English prose, and pseudo-random byte streams). Our empirical findings demonstrate that while RLE exhibits near-instantaneous execution ($\mathcal{O}(N)$) for run-heavy workloads, LZW provides the highest overall compression ratios on English text ($2.60\times$) and repetitive data ($72.83\times$), overcoming the single-character theoretical limitations of Huffman coding.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Data Compression, Huffman Coding, Run-Length Encoding, LZW, Information Entropy, Greedy Algorithms, Dynamic Dictionary.
+\end{IEEEkeywords}
+
+\section{Group Information}
+\label{sec:group_info}
+
+The contributions and division of responsibilities across the group members are summarized in Table~\ref{tab:group_info}.
+
+\begin{table}[h]
+\caption{Group Members Contribution Matrix}
+\label{tab:group_info}
+\centering
+\begin{tabular}{p{2.2cm}p{1.4cm}p{3.2cm}c}
+\toprule
+\textbf{Student Name} & \textbf{Student ID} & \textbf{Assigned Tasks} & \textbf{\% Completed} \\
+\midrule
+Student Name 1 & 22120001 & Architecture design, RLE algorithm, CLI parser & 100\% \\
+Student Name 2 & 22120002 & Huffman coding, min-heap binary tree, bitstream packing & 100\% \\
+Student Name 3 & 22120003 & LZW compression, dictionary optimization, benchmarking & 100\% \\
+Student Name 4 & 22120004 & Data collection, experimental analysis, report drafting & 100\% \\
+\midrule
+\multicolumn{3}{l}{\textbf{Total Group Completion}} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Problem Statement}
+\label{sec:problem_statement}
+
+\subsection{Formal Definition}
+Let $S = \langle s_1, s_2, \dots, s_N \rangle$ denote an input sequence of symbols of length $N$ drawn from a finite alphabet $\Sigma$. Lossless data compression seeks an injective encoding mapping $\mathcal{E}: \Sigma^* \to \{0, 1\}^*$ yielding a compressed bitstream $C = \mathcal{E}(S)$ of length $M = |C|$ such that:
+\begin{enumerate}
+    \item \textbf{Size Minimization}: $\mathbb{E}[|C|] < N \cdot \lceil \log_2 |\Sigma| \rceil$ whenever the source contains informational redundancies.
+    \item \textbf{Lossless Invariant}: There exists a deterministic decoding function $\mathcal{D}$ such that $\mathcal{D}(\mathcal{E}(S)) \equiv S, \forall S \in \Sigma^*$.
+\end{enumerate}
+
+According to Shannon's Source Coding Theorem (1948), the absolute lower bound on the average code length $\bar{L}$ without information loss is given by the empirical Shannon Entropy $H(S)$:
+\begin{equation}
+    H(S) = -\sum_{x \in \Sigma} P(x) \log_2 P(x)
+\end{equation}
+
+\subsection{Standard Running Example}
+To rigorously trace the internal state dynamics of each algorithm in Section~\ref{sec:algorithm_analysis}, we define the following standard running example:
+\begin{equation}
+    \mathbf{S = \text{``BABBACAC''}}
+\end{equation}
+The sequence properties are:
+\begin{itemize}
+    \item Length: $N = 8$ symbols ($8 \text{ bytes} = 64 \text{ bits}$ in ASCII).
+    \item Alphabet: $\Sigma = \{ \text{'A'}, \text{'B'}, \text{'C'} \}$ ($K = |\Sigma| = 3$).
+    \item Symbol Frequencies: $f(\text{'A'}) = 3$, $f(\text{'B'}) = 3$, $f(\text{'C'}) = 2$.
+    \item Entropy: $H(S) = -( \frac{3}{8}\log_2\frac{3}{8} + \frac{3}{8}\log_2\frac{3}{8} + \frac{2}{8}\log_2\frac{2}{8} ) \approx 1.561 \text{ bits/symbol}$.
+    \item Theoretical Minimal Representation: $8 \times 1.561 \approx 12.49 \text{ bits} \approx 2 \text{ bytes}$.
+\end{itemize}
+
+\section{Algorithm Analysis}
+\label{sec:algorithm_analysis}
+
+\subsection{Run-Length Encoding (RLE)}
+
+\subsubsection{Introduction \& Real-World Applications}
+Run-Length Encoding (RLE) is a basic structural compression scheme that exploits spatial redundancy by grouping contiguous repetitions of identical symbols into a pair $(count, symbol)$. RLE is heavily deployed in:
+\begin{itemize}
+    \item ITU-T Group 3 and Group 4 \textbf{Fax transmissions}.
+    \item Palette-based raster graphic formats such as \textbf{BMP} and \textbf{PCX}.
+    \item Zero-run compression in the quantization stage of \textbf{JPEG}.
+\end{itemize}
+
+\subsubsection{Pseudocode}
+\begin{algorithm}[H]
+\caption{RLE-Compress(Input, $N$)}
+\begin{algorithmic}[1]
+\STATE $Output \gets \emptyset$, $i \gets 0$
+\WHILE{$i < N$}
+    \STATE $symbol \gets Input[i]$, $count \gets 1$
+    \WHILE{$i + count < N$ \textbf{and} $Input[i + count] == symbol$ \textbf{and} $count < 255$}
+        \STATE $count \gets count + 1$
+    \ENDWHILE
+    \STATE Append $(count, symbol)$ to $Output$
+    \STATE $i \gets i + count$
+\ENDWHILE
+\RETURN $Output$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{RLE-Decompress(Compressed, $M$)}
+\begin{algorithmic}[1]
+\STATE $Output \gets \emptyset$
+\FOR{$i \gets 0$ \TO $M-1$ \textbf{step} $2$}
+    \STATE $count \gets Compressed[i]$, $symbol \gets Compressed[i+1]$
+    \FOR{$j \gets 1$ \TO $count$}
+        \STATE Append $symbol$ to $Output$
+    \ENDFOR
+\ENDFOR
+\RETURN $Output$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Step-by-Step Trace on ``BABBACAC''}
+Tracing RLE on $S = \text{``BABBACAC''}$:
+\begin{enumerate}
+    \item Index 0: Character `'B'`, run length = 1 $\to$ emit `(1, 'B')`.
+    \item Index 1: Character `'A'`, run length = 1 $\to$ emit `(1, 'A')`.
+    \item Index 2..3: Character `'B'`, run length = 2 $\to$ emit `(2, 'B')`.
+    \item Index 4: Character `'A'`, run length = 1 $\to$ emit `(1, 'A')`.
+    \item Index 5: Character `'C'`, run length = 1 $\to$ emit `(1, 'C')`.
+    \item Index 6: Character `'A'`, run length = 1 $\to$ emit `(1, 'A')`.
+    \item Index 7: Character `'C'`, run length = 1 $\to$ emit `(1, 'C')`.
+\end{enumerate}
+Resulting output: $14 \text{ bytes}$ ($7 \text{ pairs} \times 2 \text{ bytes}$). Because no extended runs exist, RLE produces negative compression (ratio $0.57\times$).
+
+\subsubsection{Complexity \& Boundary Discussion}
+\begin{itemize}
+    \item \textbf{Time Complexity}: $\mathcal{O}(N)$ for both compression and decompression.
+    \item \textbf{Space Complexity}: $\mathcal{O}(1)$ auxiliary space.
+    \item \textbf{Boundaries}: Best case occurs when data consists of uniform repeated runs ($255\times$ reduction, ratio $\approx 127.5\times$). Worst case occurs on alternating non-repeating data, causing $100\%$ size expansion ($2N$ bytes).
+\end{itemize}
+
+\subsection{Huffman Coding}
+
+\subsubsection{Introduction \& Real-World Applications}
+Huffman coding constructs a mathematically optimal, prefix-free binary tree where frequent characters are allocated shorter codes. It forms the foundational backend of:
+\begin{itemize}
+    \item \textbf{DEFLATE} engine used in \textbf{GZIP}, \textbf{PNG}, and \textbf{ZIP}.
+    \item Audio and image entropy coding in \textbf{MP3}, \textbf{AAC}, and \textbf{JPEG}.
+    \item \textbf{HTTP/2} HPACK header compression.
+\end{itemize}
+
+\subsubsection{Pseudocode}
+\begin{algorithm}[H]
+\caption{Huffman-Build-Tree(Freq, Alphabet $K$)}
+\begin{algorithmic}[1]
+\STATE $Q \gets$ Min-Priority-Queue()
+\FOR{each $c \in \Sigma$ with $Freq[c] > 0$}
+    \STATE $node \gets \text{NewNode}(symbol=c, freq=Freq[c])$
+    \STATE $Q.\text{Insert}(node)$
+\ENDFOR
+\WHILE{$Q.\text{Size}() > 1$}
+    \STATE $left \gets Q.\text{ExtractMin}()$, $right \gets Q.\text{ExtractMin}()$
+    \STATE $parent \gets \text{NewNode}(freq=left.freq + right.freq, left, right)$
+    \STATE $Q.\text{Insert}(parent)$
+\ENDWHILE
+\RETURN $Q.\text{ExtractMin}()$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Step-by-Step Trace on ``BABBACAC''}
+\textbf{Frequencies}: $f(\text{'C'}) = 2, f(\text{'A'}) = 3, f(\text{'B'}) = 3$.
+\begin{enumerate}
+    \item Initial Priority Queue: $Q = [(\text{'C'}:2), (\text{'A'}:3), (\text{'B'}:3)]$.
+    \item Extract $(\text{'C'}:2)$ and $(\text{'A'}:3)$, merge into node $N_1 (5)$. Insert $N_1 \to Q = [(\text{'B'}:3), (N_1:5)]$.
+    \item Extract $(\text{'B'}:3)$ and $(N_1:5)$, merge into root $R (8)$. Insert $R \to Q = [(R:8)]$.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[level distance=1.2cm,
+  level 1/.style={sibling distance=3cm},
+  level 2/.style={sibling distance=1.5cm}]
+  \node [circle,draw] {8}
+    child {node [rectangle,draw] {'B':3} edge from parent node[left] {0}}
+    child {node [circle,draw] {5}
+      child {node [rectangle,draw] {'C':2} edge from parent node[left] {0}}
+      child {node [rectangle,draw] {'A':3} edge from parent node[right] {1}}
+      edge from parent node[right] {1}
+    };
+\end{tikzpicture}
+\caption{Generated Optimal Huffman Tree for ``BABBACAC''}
+\label{fig:huffman_tree}
+\end{figure}
+
+The assigned variable-length prefix codes are:
+\begin{itemize}
+    \item `'B'`: \textbf{`0`} (1 bit)
+    \item `'C'`: \textbf{`10`} (2 bits)
+    \item `'A'`: \textbf{`11`} (2 bits)
+\end{itemize}
+
+Encoding $S = \text{``BABBACAC''}$:
+$$\text{Bitstream: } \underbrace{\text{0}}_{\text{'B'}} \underbrace{\text{11}}_{\text{'A'}} \underbrace{\text{0}}_{\text{'B'}} \underbrace{\text{0}}_{\text{'B'}} \underbrace{\text{11}}_{\text{'A'}} \underbrace{\text{10}}_{\text{'C'}} \underbrace{\text{11}}_{\text{'A'}} \underbrace{\text{10}}_{\text{'C'}} \implies \mathbf{13 \text{ bits}}$$
+Average length $\bar{L} = \frac{13}{8} = 1.625 \text{ bits/symbol}$, requiring only 2 payload bytes.
+
+\subsubsection{Complexity \& Boundary Discussion}
+\begin{itemize}
+    \item \textbf{Time Complexity}: $\mathcal{O}(N + K \log K) \equiv \mathcal{O}(N)$ for fixed $K = 256$.
+    \item \textbf{Space Complexity}: $\mathcal{O}(K) = \mathcal{O}(1)$ auxiliary space for tree nodes.
+    \item \textbf{Boundaries}: Extremely effective on skewed distributions (up to $8\times$ compression). Worst-case occurs when all 256 bytes are equiprobable ($H(S) = 8.0$), resulting in zero compression plus header overhead.
+\end{itemize}
+
+\subsection{Lempel-Ziv-Welch (LZW)}
+
+\subsubsection{Introduction \& Real-World Applications}
+LZW is a universal dictionary-based algorithm that parses input data into multi-character phrases, building an adaptive vocabulary table without transmitting metadata headers. Major real-world deployments include:
+\begin{itemize}
+    \item Classic UNIX \textbf{compress} utility.
+    \item \textbf{GIF} image format.
+    \item \textbf{TIFF} and \textbf{PDF} document flate filters.
+\end{itemize}
+
+\subsubsection{Step-by-Step Trace on ``BABBACAC''}
+Initial state: Single ASCII characters ($0..255$) pre-populated, $nextCode = 256$.
+
+\begin{table}[h]
+\caption{LZW Compression Trace on ``BABBACAC''}
+\label{tab:lzw_trace}
+\centering
+\begin{tabular}{ccccccc}
+\toprule
+\textbf{Step} & \textbf{Prefix $w$} & \textbf{Next $c$} & \textbf{$w+c$} & \textbf{In Dict?} & \textbf{Output Code} & \textbf{New Dict Entry} \\
+\midrule
+1 & `""` & `'B'` & `"B"` & Yes & -- & $w \gets \text{"B"}$ \\
+2 & `"B"` & `'A'` & `"BA"` & No & \textbf{66} (`'B'`) & Dict[256] = `"BA"` \\
+3 & `"A"` & `'B'` & `"AB"` & No & \textbf{65} (`'A'`) & Dict[257] = `"AB"` \\
+4 & `"B"` & `'B'` & `"BB"` & No & \textbf{66} (`'B'`) & Dict[258] = `"BB"` \\
+5 & `"B"` & `'A'` & `"BA"` & Yes & -- & $w \gets \text{"BA"}$ \\
+6 & `"BA"` & `'C'` & `"BAC"` & No & \textbf{256} (`"BA"`) & Dict[259] = `"BAC"` \\
+7 & `"C"` & `'A'` & `"CA"` & No & \textbf{67} (`'C'`) & Dict[260] = `"CA"` \\
+8 & `"A"` & `'C'` & `"AC"` & No & \textbf{65} (`'A'`) & Dict[261] = `"AC"` \\
+End & `"C"` & EOF & -- & -- & \textbf{67} (`'C'`) & Flush final code \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Emitted Stream}: $[66, 65, 66, 256, 67, 65, 67]$ (7 codes $\times 2 \text{ bytes} = 14 \text{ bytes}$).
+
+\subsubsection{Complexity \& Boundary Discussion}
+\begin{itemize}
+    \item \textbf{Time Complexity}: $\mathcal{O}(N)$ using hash-based dictionary lookups.
+    \item \textbf{Space Complexity}: $\mathcal{O}(D)$ where $D \le 65536$ is the maximum dictionary capacity.
+    \item \textbf{Boundaries}: Superb for repetitive multi-byte patterns ($> 70\times$ ratio). On random data or small files, transmitting 16-bit codes for 8-bit unrepeated characters causes initial overhead and size inflation.
+\end{itemize}
+
+\section{Experimental Results}
+\label{sec:experimental_results}
+
+\subsection{Benchmark Measurements}
+Table~\ref{tab:experimental_results} presents the execution time and compression ratio across all test scenarios.
+
+\begin{table}[h]
+\caption{Benchmark Execution Time and Compression Ratio}
+\label{tab:experimental_results}
+\centering
+\begin{tabular}{ccccc}
+\toprule
+\textbf{File Size} & \textbf{Data Type} & \textbf{RLE} & \textbf{Huffman} & \textbf{LZW} \\
+\midrule
+10 KB & Standard English & 0.00 ms (0.56x) & 0.33 ms (1.50x) & 5.00 ms (1.34x) \\
+100 KB & Standard English & 2.00 ms (0.54x) & 4.00 ms (1.70x) & 50.00 ms (2.04x) \\
+500 KB & Standard English & 11.33 ms (0.52x) & 21.00 ms (1.73x) & 233.67 ms (2.57x) \\
+1 MB & Standard English & 23.67 ms (0.51x) & 41.33 ms (1.74x) & 442.67 ms (2.60x) \\
+5 MB & Standard English & 112.00 ms (0.51x) & 203.33 ms (1.72x) & 2138.67 ms (2.47x) \\
+10 MB & Standard English & 222.33 ms (0.51x) & 402.33 ms (1.72x) & 4155.67 ms (2.45x) \\
+\midrule
+1 MB & Highly Repetitive & 6.00 ms (2.50x) & 18.00 ms (3.32x) & 352.67 ms (72.83x) \\
+1 MB & Completely Random & 23.00 ms (0.50x) & 64.33 ms (1.00x) & 666.67 ms (0.80x) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analytical Discussion}
+\begin{enumerate}
+    \item \textbf{Theoretical Big-O Alignment}: The measured execution times scale strictly linearly with file size $N$ for RLE ($2\text{ ms} \to 222\text{ ms}$ for $100\times$ size) and Huffman ($4\text{ ms} \to 402\text{ ms}$), verifying the $\mathcal{O}(N)$ complexity. LZW exhibits higher constant-factor overhead due to dynamic dictionary node allocations.
+    \item \textbf{Highest Compression Performance}: LZW achieves the highest ratio on English text ($2.60\times$) for files $\ge 500\text{ KB}$ and achieves an astonishing $72.83\times$ ratio on repetitive data, drastically outperforming character-by-character Huffman coding.
+    \item \textbf{Information-Theoretic Explanation}: Shannon's Source Coding theorem bounds Huffman to $\ge 1 \text{ bit/symbol}$ (max $8\times$ ratio). LZW overcomes this bound by grouping variable-length substrings into single multi-byte index references, enabling sub-bit-per-character efficiency.
+\end{enumerate}
+
+\section{References}
+\begin{thebibliography}{00}
+\bibitem{cormen} T. H. Cormen, C. E. Leiserson, R. L. Rivest, and C. Stein, ``Greedy Algorithms: Huffman Codes,'' in \emph{Introduction to Algorithms}, 3rd ed. Cambridge, MA, USA: MIT Press, 2009, ch. 16, sec. 3, pp. 428--437.
+\bibitem{huffman} D. A. Huffman, ``A Method for the Construction of Minimum-Redundancy Codes,'' \emph{Proceedings of the IRE}, vol. 40, no. 9, pp. 1098--1101, Sept. 1952.
+\bibitem{welch} T. A. Welch, ``A Technique for High-Performance Data Compression,'' \emph{Computer}, vol. 17, no. 6, pp. 8--19, June 1984.
+\bibitem{shannon} C. E. Shannon, ``A Mathematical Theory of Communication,'' \emph{The Bell System Technical Journal}, vol. 27, no. 3, pp. 379--423, July 1948.
+\bibitem{zivlempel} J. Ziv and A. Lempel, ``A Universal Algorithm for Sequential Data Compression,'' \emph{IEEE Transactions on Information Theory}, vol. 23, no. 3, pp. 337--343, May 1977.
+\end{thebibliography}
+
+\section{Acknowledgment}
+We would like to express our gratitude to our instructors, Assoc. Prof. Dr. Le Thanh Tung and Dr. Tran Hoang Quan (Department of Knowledge Engineering, FIT - HCMUS), for their insightful lectures and guidance throughout this project.
+
+\end{document}
