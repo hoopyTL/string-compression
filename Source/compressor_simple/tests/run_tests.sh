@@ -4,10 +4,16 @@
 
 set -e
 
-# Determine directory paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SRC_DIR="$PROJECT_ROOT/Source/compressor_simple"
+
+# Find directory containing main.cpp
+if [ -f "$SCRIPT_DIR/../main.cpp" ]; then
+    SRC_DIR="$SCRIPT_DIR/.."
+elif [ -f "$SCRIPT_DIR/../Source/compressor_simple/main.cpp" ]; then
+    SRC_DIR="$SCRIPT_DIR/../Source/compressor_simple"
+else
+    SRC_DIR="$SCRIPT_DIR"
+fi
 
 EXT=""
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
